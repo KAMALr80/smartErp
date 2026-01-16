@@ -10,6 +10,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class SalesController extends Controller
 {
@@ -161,12 +162,21 @@ class SalesController extends Controller
     }
 
     /* =========================================================
-       SHOW SALE
+       SHOW SALE (FIXED - Was missing)
     ========================================================= */
     public function show(Sale $sale)
     {
         $sale->load(['customer', 'items.product']);
         return view('sales.show', compact('sale'));
+    }
+
+    /* =========================================================
+       VIEW SALE (ADDED - This is what's being called)
+    ========================================================= */
+    public function view(Sale $sale)
+    {
+        // This method is an alias for show() method
+        return $this->show($sale);
     }
 
     /* =========================================================
@@ -259,5 +269,45 @@ class SalesController extends Controller
         $sale->load(['customer', 'items.product']);
         return Pdf::loadView('sales.invoice', compact('sale'))
             ->stream('invoice-' . $sale->invoice_no . '.pdf');
+    }
+
+    /* =========================================================
+       DESTROY SALE (ADDED)
+    ========================================================= */
+    public function destroy(Sale $sale)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Restore stock
+            foreach ($sale->items as $item) {
+                $item->product->increment('quantity', $item->quantity);
+            }
+
+            // Delete sale items
+            $sale->items()->delete();
+
+            // Delete sale
+            $sale->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('sales.index')
+                ->with('success', 'Sale deleted and stock restored successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error deleting sale: ' . $e->getMessage());
+        }
+    }
+
+    /* =========================================================
+       PRINT INVOICE (OPTIONAL - For browser view)
+    ========================================================= */
+    public function print(Sale $sale)
+    {
+        $sale->load(['customer', 'items.product']);
+        return view('sales.print', compact('sale'));
     }
 }

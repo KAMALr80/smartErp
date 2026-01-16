@@ -2,21 +2,24 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'customer_id',
         'invoice_no',
+        'invoice_token',
         'sale_date',
         'sub_total',
         'discount',
         'tax',
-        'grand_total'
+        'grand_total',
+    ];
+
+    // 🔥 IMPORTANT FIX
+    protected $casts = [
+        'sale_date' => 'datetime',
     ];
 
     public function customer()

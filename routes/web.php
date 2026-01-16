@@ -121,18 +121,47 @@ Route::middleware('auth')->group(function () {
 
     /* ================= SALES ================= */
     Route::prefix('sales')->name('sales.')->group(function () {
+
         Route::get('/', [SalesController::class, 'index'])->name('index');
         Route::get('/create', [SalesController::class, 'create'])->name('create');
         Route::post('/', [SalesController::class, 'store'])->name('store');
+
         Route::get('/{sale}', [SalesController::class, 'show'])->name('show');
         Route::get('/{sale}/invoice', [SalesController::class, 'invoice'])->name('invoice');
+        Route::get('/{sale}/edit', [SalesController::class, 'edit'])->name('edit');
+        Route::put('/{sale}', [SalesController::class, 'update'])->name('update');
     });
 
     /* ================= PURCHASES ================= */
     Route::resource('purchases', PurchaseController::class);
 
-    /* ================= CUSTOMERS ================= */
-    Route::resource('customers', CustomerController::class);
+    /* ================= CUSTOMERS (🔥 NO CONFLICT VERSION) ================= */
+    Route::prefix('customers')->name('customers.')->group(function () {
+
+        // 🔥 AJAX ROUTES FIRST (VERY IMPORTANT)
+        Route::get(
+            'ajax-search',
+            [CustomerController::class, 'ajaxSearch']
+        )->name('ajax.search');
+
+        Route::post(
+            'ajax-store',
+            [CustomerController::class, 'ajaxStore']
+        )->name('ajax.store');
+
+        // 👁 Customer Sales History
+        Route::get(
+            '{customer}/sales',
+            [CustomerController::class, 'sales']
+        )->name('sales');
+
+        // CRUD WITHOUT show()
+        Route::resource(
+            '/',
+            CustomerController::class
+        )->except(['show'])
+         ->parameters(['' => 'customer']);
+    });
 
     /* ================= REPORTS ================= */
     Route::prefix('reports')->group(function () {
@@ -168,64 +197,24 @@ Route::middleware('auth')->group(function () {
 });
 
 
-
-Route::middleware('auth')->group(function () {
-    Route::post(
-        '/customers/ajax-store',
-        [CustomerController::class, 'ajaxStore']
-    )->name('customers.ajax.store');
-});
-
-
-Route::get('/customers/{customer}/sales',
-    [CustomerController::class, 'sales']
-)->name('customers.sales');
-
-
-
-Route::middleware('auth')->group(function () {
-
-    Route::resource('customers', CustomerController::class);
-
-    // 👁 Customer Sales History
-    Route::get(
-        'customers/{customer}/sales',
-        [CustomerController::class, 'sales']
-    )->name('customers.sales');
-
-    // AJAX customer add (from sales page)
-    Route::post(
-        'customers/ajax-store',
-        [CustomerController::class, 'ajaxStore']
-    )->name('customers.ajax.store');
-
-});
-
-
-Route::get('/sales/{sale}/edit', [SalesController::class, 'edit'])
-    ->name('sales.edit');
-
-Route::put('/sales/{sale}', [SalesController::class, 'update'])
-    ->name('sales.update');
-
-    Route::get('/sales/{sale}/view',
-    [SalesController::class, 'view']
-)->name('sales.view');
-
-
-
-
-Route::get('/customers/{customer}/sales',
-    [CustomerController::class, 'sales']
-)->name('customers.sales');
-
-
-
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-});
-
-
-Route::post('/customers/ajax-store', [CustomerController::class, 'ajaxStore'])
+Route::post('/customers/store-ajax', [CustomerController::class, 'storeAjax'])
     ->name('customers.store.ajax');
+
+
+
+
+Route::get('/sales/{sale}', [SalesController::class, 'view'])
+    ->name('sales.view');
+
+
+
+Route::resource('sales', SalesController::class);
+
+
+
+
+Route::post('/customers/store-ajax', [CustomerController::class, 'storeAjax'])
+    ->name('customers.store.ajax');
+
+    Route::get('/sales/{sale}/view', [SalesController::class, 'view'])
+    ->name('sales.view');

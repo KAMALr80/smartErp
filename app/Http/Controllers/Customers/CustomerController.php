@@ -11,10 +11,24 @@ class CustomerController extends Controller
     /* ================= LIST ================= */
     public function index()
     {
-        $customers = Customer::latest()->paginate(10);
+        $customers = Customer::latest()->paginate(3);
         return view('customers.index', compact('customers'));
     }
 
+    /* ================= AJAX LIVE SEARCH ================= */
+public function ajaxSearch(Request $request)
+{
+    $search = $request->search;
+
+    $customers = Customer::where('name', 'like', "%{$search}%")
+        ->orWhere('mobile', 'like', "%{$search}%")
+        ->orWhere('email', 'like', "%{$search}%")
+        ->latest()
+        ->limit(20)
+        ->get(['id', 'name', 'mobile', 'email', 'gst_no']); // Specify columns
+
+    return response()->json($customers);
+}
     /* ================= CREATE ================= */
     public function create()
     {
@@ -81,27 +95,35 @@ public function store(Request $request)
     }
 
     /* ================= AJAX STORE (FROM SALES PAGE) ================= */
-    public function ajaxStore(Request $request)
+ public function storeAjax(Request $request)
     {
-        $request->validate([
-            'name'   => 'required',
-            'mobile' => 'required',
-        ]);
+        try {
+            $request->validate([
+                'name'    => 'required|string|max:255',
+                'mobile'  => 'required|string|max:20',
+                'email'   => 'nullable|email',
+                'address' => 'nullable|string',
+            ]);
 
-        $customer = Customer::create([
-            'name'    => $request->name,
-            'mobile'  => $request->mobile,
-            'email'   => $request->email,
-            'address' => $request->address,
-            'gst_no'  => $request->gst_no,
-        ]);
+            $customer = Customer::create([
+                'name'    => $request->name,
+                'mobile'  => $request->mobile,
+                'email'   => $request->email,
+                'address' => $request->address,
+            ]);
 
-        return response()->json([
-            'success'  => true,
-            'customer' => $customer,
-        ]);
+            return response()->json([
+                'success'  => true,
+                'customer' => $customer
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
-
     /* ================= CUSTOMER SALES (👁 VIEW BUTTON) ================= */
     public function sales(Customer $customer)
     {
